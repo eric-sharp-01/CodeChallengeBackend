@@ -1,0 +1,6 @@
+bin/
+obj/
+/packages/
+.idea/
+/.vs/TechTest/v16/Server/sqlite3
+/.vs/TechTest
