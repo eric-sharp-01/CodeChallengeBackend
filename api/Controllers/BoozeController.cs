@@ -34,7 +34,7 @@ namespace api.Controllers
         {
             var cocktailList = new CocktailList();
             cocktailList.Cocktails = new List<Cocktail>();
-            string json = await this._client.Get("https://www.thecocktaildb.com/api/json/v1/1/filter.php?i=Gin");
+            string json = await this._client.Get($"https://www.thecocktaildb.com/api/json/v1/1/filter.php?i={ingredient}");
             JToken jToken = JsonConvert.DeserializeObject<JToken>(json);
             var list = jToken["drinks"].ToObject<JArray>();
             List<Task<Cocktail>> drinkDataList = new List<Task<Cocktail>>();
@@ -48,7 +48,6 @@ namespace api.Controllers
 
             //filter the list and get the ones which have the ingredient
             cocktailList.Cocktails = result
-                .Where(item => item.Ingredients.Contains(ingredient, StringComparer.OrdinalIgnoreCase))
                 .OrderBy(item => item.Ingredients.Count()).ToList();
 
 

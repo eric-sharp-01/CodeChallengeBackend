@@ -24,10 +24,10 @@ namespace CocktailUnitTest
             Assert.IsType<OkObjectResult>(actionResult);
             var okResult = actionResult as OkObjectResult;
             var cocktailList = okResult.Value as CocktailList;
-            Assert.Equal(6, cocktailList.meta.count);
-            Assert.Equal(5, cocktailList.meta.medianIngredientCount);
-            Assert.Equal(11419, cocktailList.meta.firstId);
-            Assert.Equal(178315, cocktailList.meta.lastId);
+            Assert.Equal(25, cocktailList.meta.count);
+            Assert.Equal(4, cocktailList.meta.medianIngredientCount);
+            Assert.Equal(11007, cocktailList.meta.firstId);
+            Assert.Equal(178317, cocktailList.meta.lastId);
         }
 
         [Fact]
