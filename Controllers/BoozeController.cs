@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
 using api.Models.Response;
 using api.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -35,12 +33,6 @@ namespace api.Controllers
         public async Task<IActionResult> GetIngredientSearch([FromRoute] string ingredient)
         {
             var cocktailList = new CocktailList();
-            // TODO - Search the CocktailDB for cocktails with the ingredient given, and return the cocktails
-            // https://www.thecocktaildb.com/api/json/v1/1/filter.php?i=Gin
-            // You will need to populate the cocktail details from
-            // https://www.thecocktaildb.com/api/json/v1/1/lookup.php?i=11007
-            // The calculate and fill in the meta object
-
             cocktailList.Cocktails = new List<Cocktail>();
             string json = await this._client.Get("https://www.thecocktaildb.com/api/json/v1/1/filter.php?i=Gin");
             JToken jToken = JsonConvert.DeserializeObject<JToken>(json);
@@ -49,17 +41,80 @@ namespace api.Controllers
 
             foreach (var item in list)
             {
-                filteredList.Add(CheckCocktail(item, ingredient));
+                filteredList.Add(this.GetCocktail(item));
             }
             var result = await Task.WhenAll<Cocktail>(filteredList);
-            cocktailList.Cocktails = result.Where(item => item != null).ToList();
+
+            cocktailList.Cocktails = result
+                .Where(item => item.Ingredients.Contains(ingredient, StringComparer.OrdinalIgnoreCase))
+                .OrderBy(item => item.Ingredients.Count()).ToList();
+
+
+            if (cocktailList.Cocktails.Any())
+            {
+                int count = cocktailList.Cocktails.Count();
+
+                int firstId = cocktailList.Cocktails.Min(item => item.Id);
+
+                var lastId = cocktailList.Cocktails.Max(item => item.Id);
+
+                int medianIndex = count / 2;
+                int medianNumber = 0;
+                if (count % 2 == 0)
+                {
+                    //take round down for the median number
+                    medianNumber =
+                        (
+                            cocktailList.Cocktails[medianIndex].Ingredients.Count()
+                            + cocktailList.Cocktails[medianIndex - 1].Ingredients.Count()
+                        ) / 2;
+                }
+                else
+                {
+                    medianNumber = cocktailList.Cocktails[medianIndex].Ingredients.Count();
+                }
+
+                cocktailList.meta = new ListMeta
+                {
+                    count = count,
+                    firstId = firstId,
+                    lastId = lastId,
+                    medianIngredientCount = medianNumber
+                };
+            }
+            else
+            {
+                cocktailList.meta = new ListMeta
+                {
+                    count = 0,
+                    firstId = 0,
+                    lastId = 0,
+                    medianIngredientCount = 0
+                };
+            }
+            
             return Ok(cocktailList);
         }
 
-        private async Task<Cocktail> CheckCocktail(JToken item, string ingredient)
+        [HttpGet]
+        [Route("random")]
+        public async Task<IActionResult> GetRandom()
         {
-            int id = Convert.ToInt32(item["idDrink"].ToString());
+            string strItem = await this._client.Get(@"https://www.thecocktaildb.com/api/json/v1/1/random.php");
+            var cocktail = this.ConvertCocktailJsonToObject(strItem);
+            return Ok(cocktail);
+        }
+
+        private async Task<Cocktail> GetCocktail(JToken item)
+        {
+            int id = item["idDrink"].Value<int>();
             string strItem = await this._client.Get($"https://www.thecocktaildb.com/api/json/v1/1/lookup.php?i={id}");
+            var cocktail = this.ConvertCocktailJsonToObject(strItem);
+            return cocktail;
+        }
+
+        private Cocktail ConvertCocktailJsonToObject(string strItem)
+        {
             JToken jsonItem = JsonConvert.DeserializeObject<JToken>(strItem);
             var details = jsonItem["drinks"][0];
             List<string> ingredients = new List<string>();
@@ -71,31 +126,16 @@ namespace api.Controllers
                 ingredients.Add(value);
             }
 
-            if (ingredients.Contains(ingredient))
+            var cocktail = new Cocktail()
             {
-                var cocktail = new Cocktail()
-                {
-                    Name = item["strDrink"].ToString(),
-                    Id = id,
-                    ImageURL = item["strDrinkThumb"].ToString(),
-                    Ingredients = ingredients
-                };
-                return cocktail;
-            }
-            else
-            {
-                return null;
-            }
-        }
+                Name = details["strDrink"].Value<string>(),
+                Id = details["idDrink"].Value<int>(),
+                ImageURL = details["strDrinkThumb"].Value<string>(),
+                Instructions = details["strInstructions"].Value<string>(),
+                Ingredients = ingredients
+            };
 
-        [HttpGet]
-        [Route("random")]
-        public async Task<IActionResult> GetRandom()
-        {
-            var cocktail = new Cocktail();
-            // TODO - Go and get a random cocktail
-            // https://www.thecocktaildb.com/api/json/v1/1/random.php
-            return Ok(cocktail);
+            return cocktail;
         }
     }
 }
