@@ -37,14 +37,16 @@ namespace api.Controllers
             string json = await this._client.Get("https://www.thecocktaildb.com/api/json/v1/1/filter.php?i=Gin");
             JToken jToken = JsonConvert.DeserializeObject<JToken>(json);
             var list = jToken["drinks"].ToObject<JArray>();
-            List<Task<Cocktail>> filteredList = new List<Task<Cocktail>>();
+            List<Task<Cocktail>> drinkDataList = new List<Task<Cocktail>>();
 
+            //populate the details of cocktails
             foreach (var item in list)
             {
-                filteredList.Add(this.GetCocktail(item));
+                drinkDataList.Add(this.GetCocktail(item));
             }
-            var result = await Task.WhenAll<Cocktail>(filteredList);
+            var result = await Task.WhenAll<Cocktail>(drinkDataList);
 
+            //filter the list and get the ones which have the ingredient
             cocktailList.Cocktails = result
                 .Where(item => item.Ingredients.Contains(ingredient, StringComparer.OrdinalIgnoreCase))
                 .OrderBy(item => item.Ingredients.Count()).ToList();
@@ -52,6 +54,7 @@ namespace api.Controllers
 
             if (cocktailList.Cocktails.Any())
             {
+                //calculate the meta
                 int count = cocktailList.Cocktails.Count();
 
                 int firstId = cocktailList.Cocktails.Min(item => item.Id);
@@ -105,6 +108,7 @@ namespace api.Controllers
             return Ok(cocktail);
         }
 
+        //get the details using drink id
         private async Task<Cocktail> GetCocktail(JToken item)
         {
             int id = item["idDrink"].Value<int>();
