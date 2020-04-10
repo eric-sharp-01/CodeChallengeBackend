@@ -35,66 +35,54 @@ namespace api.Controllers
             var cocktailList = new CocktailList();
             cocktailList.Cocktails = new List<Cocktail>();
             string json = await this._client.Get($"https://www.thecocktaildb.com/api/json/v1/1/filter.php?i={ingredient}");
-            JToken jToken = JsonConvert.DeserializeObject<JToken>(json);
-            var list = jToken["drinks"].ToObject<JArray>();
-            List<Task<Cocktail>> drinkDataList = new List<Task<Cocktail>>();
-
-            //populate the details of cocktails
-            foreach (var item in list)
+            if(!string.IsNullOrWhiteSpace(json))
             {
-                drinkDataList.Add(this.GetCocktail(item));
-            }
-            var result = await Task.WhenAll<Cocktail>(drinkDataList);
-
-            //filter the list and get the ones which have the ingredient
-            cocktailList.Cocktails = result
-                .OrderBy(item => item.Ingredients.Count()).ToList();
-
-
-            if (cocktailList.Cocktails.Any())
-            {
-                //calculate the meta
-                int count = cocktailList.Cocktails.Count();
-
-                int firstId = cocktailList.Cocktails.Min(item => item.Id);
-
-                var lastId = cocktailList.Cocktails.Max(item => item.Id);
-
-                int medianIndex = count / 2;
-                int medianNumber = 0;
-                if (count % 2 == 0)
+                JToken jToken = JsonConvert.DeserializeObject<JToken>(json);
+                var list = jToken["drinks"].ToObject<JArray>();
+                List<Task<Cocktail>> drinkDataList = new List<Task<Cocktail>>();
+                foreach (var item in list)
                 {
-                    //take round down for the median number
-                    medianNumber =
-                        (
-                            cocktailList.Cocktails[medianIndex].Ingredients.Count()
-                            + cocktailList.Cocktails[medianIndex - 1].Ingredients.Count()
-                        ) / 2;
+                    drinkDataList.Add(this.GetCocktail(item));
                 }
-                else
+                var result = await Task.WhenAll<Cocktail>(drinkDataList);
+                //filter the list and get the ones which have the ingredient
+                cocktailList.Cocktails = result
+                    .OrderBy(item => item.Ingredients.Count()).ToList();
+
+                if (cocktailList.Cocktails.Any())
                 {
-                    medianNumber = cocktailList.Cocktails[medianIndex].Ingredients.Count();
+                    //calculate the meta
+                    int count = cocktailList.Cocktails.Count();
+
+                    int firstId = cocktailList.Cocktails.Min(item => item.Id);
+
+                    var lastId = cocktailList.Cocktails.Max(item => item.Id);
+
+                    int medianIndex = count / 2;
+                    int medianNumber = 0;
+                    if (count % 2 == 0)
+                    {
+                        //take round down for the median number
+                        medianNumber =
+                            (
+                                cocktailList.Cocktails[medianIndex].Ingredients.Count()
+                                + cocktailList.Cocktails[medianIndex - 1].Ingredients.Count()
+                            ) / 2;
+                    }
+                    else
+                    {
+                        medianNumber = cocktailList.Cocktails[medianIndex].Ingredients.Count();
+                    }
+
+                    cocktailList.meta = new ListMeta
+                    {
+                        count = count,
+                        firstId = firstId,
+                        lastId = lastId,
+                        medianIngredientCount = medianNumber
+                    };
                 }
-
-                cocktailList.meta = new ListMeta
-                {
-                    count = count,
-                    firstId = firstId,
-                    lastId = lastId,
-                    medianIngredientCount = medianNumber
-                };
             }
-            else
-            {
-                cocktailList.meta = new ListMeta
-                {
-                    count = 0,
-                    firstId = 0,
-                    lastId = 0,
-                    medianIngredientCount = 0
-                };
-            }
-
             return Ok(cocktailList);
         }
 

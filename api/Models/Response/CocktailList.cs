@@ -6,6 +6,17 @@ namespace api.Models.Response
     {
         public List<Cocktail> Cocktails { get; set; }
         public ListMeta meta { get; set; }
+
+        public CocktailList()
+        {
+            this.meta = new ListMeta
+            {
+                count = 0,
+                firstId = 0,
+                lastId = 0,
+                medianIngredientCount = 0
+            };
+        }
     }
 
     public class ListMeta

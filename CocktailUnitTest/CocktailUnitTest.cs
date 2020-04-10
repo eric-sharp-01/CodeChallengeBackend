@@ -10,7 +10,7 @@ namespace CocktailUnitTest
     public class CocktailUnitTest
     {
         [Fact]
-        public async void TestCrocktailList_ShouldFindSix_Async()
+        public async void TestCrocktailList_ShouldFind_Async()
         {
             //Arrange
             var httpClient = new HttpClient();
